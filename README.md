@@ -1,6 +1,7 @@
 # data-repo
 
 Github: https://github.com/rocketbean/data-repo/releases
+
 npm: https://www.npmjs.com/package/@rocketbean/data-repo
 
 <hr/>
@@ -40,30 +41,27 @@ initialization will require parameters:
 
 **creating a Model**
 
-```
-let  clusterModel = await  Model.set("cluster",
-{
-	session: {
-		type:  "",
-		unique:  true,
-	},
-	text: {
-		type:  "",
-	},
-	threads: {
-		type: [],
-		required:  true,
-	},
-	logs: {
-		type: [],
-	},
-},
-{
-	max:  3,
-	strict:  true,
-},
-);
-```
+    let  clusterModel = await  Model.set("cluster",
+    {
+    	session: {
+    		type:  "",
+    		unique:  true,
+    	},
+    	text: {
+    		type:  "",
+    	},
+    	threads: {
+    		type: [],
+    		required:  true,
+    	},
+    	logs: {
+    		type: [],
+    	},
+    },
+    {
+    	max:  3,
+    	strict:  true,
+    });
 
 Model parameters:
 
@@ -114,24 +112,26 @@ await clusterModel.get({ text:  "test3" })
 
 > async Model.update(< identifier>, < data>) - updating a record
 
-```
-// updating using a model, if the identifier
-// results to more than 1 record, all results will be updated
-await clusterModel.update({ text:  "test" }, { text:  "test3" })
+_updating using a model, if the identifier results to more than 1 record, all results will be updated_
 
-// Or updating using a schema, will only update the specific record
-await clust.update({ text:  "test3" })
-```
+    await clusterModel.update({ text:  "test" }, { text:  "test3" })
+
+_Or updating using a schema, will only update the specific record_
+
+    await clust.update({ text:  "test3" })
 
 <hr/>
 
-> async Model.delete(< identifier>, < data>) - deleting a record
+    async Model.delete(< identifier>,  < data>) - deleting a record
+
+_deleting using a model, if the identifier results to more than 1 record, all results will be deleted_
+
+    await clusterModel.delete({ text:  "test" })
+
+_Or deleting using a schema, will only delete the specific record_
+
+    await clust.delete({ text:  "test3" })
 
 ```
-// deleting using a model, if the identifier
-// results to more than 1 record, all results will be deleted
-await clusterModel.delete({ text:  "test" })
 
-// Or deleting using a schema, will only delete the specific record
-await clust.delete({ text:  "test3" })
 ```
