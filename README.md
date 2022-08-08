@@ -1,6 +1,7 @@
 # data-repo
 
 Github: https://github.com/rocketbean/data-repo/releases
+
 npm: https://www.npmjs.com/package/@rocketbean/data-repo
 
 <hr/>
