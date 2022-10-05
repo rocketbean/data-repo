@@ -73,11 +73,15 @@ export default class ModelOperations {
   async get(index = "*") {
     var that = this;
     if (typeof index == "string") {
-      if (index === "*") return this.records;
-      else
+      if (index === "*") {
+        return Object.keys(this.records).map(
+          (record) => new Schema(this.records[record], this),
+        );
+      } else {
         return this.records[index]
           ? new Schema(this.records[index], that)
           : null;
+      }
     } else if (typeof index == "object") {
       let keys = Object.keys(index);
       let results = Object.keys(this.records)
