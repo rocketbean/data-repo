@@ -24,7 +24,7 @@ export default class Model extends ModelOperations {
     super();
     this.finalPath = path.join(
       Intel.instance.driver.finalPath,
-      md5(name) + ".chasi",
+      md5(name) + Intel.ext,
     );
 
     this.name = name;
@@ -101,6 +101,13 @@ export default class Model extends ModelOperations {
     let _m = new Model(name, property, _options);
     await Intel.instance.driver.registerModel(_m);
     return _m;
+  }
+
+  async destroy() {
+    Intel.instance.driver.destroyModel(this);
+    fs.unlink(this.finalPath, (err) => {
+      if (err) throw new Error(err);
+    });
   }
 
   preload(properties) {

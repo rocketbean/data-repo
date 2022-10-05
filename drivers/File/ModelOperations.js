@@ -48,7 +48,17 @@ export default class ModelOperations {
     return true;
   }
 
-  async create(data) {
+  async create(data = {}) {
+    if (Array.isArray(data)) {
+      for (let d = 0; d < data.length; d++) {
+        await this.pushRecord(data[d]);
+      }
+    } else {
+      return await this.pushRecord(data);
+    }
+  }
+
+  async pushRecord(data = {}) {
     data._id = uuidv4();
     data.__created = Date.now();
     data.__updated = Date.now();
@@ -59,10 +69,15 @@ export default class ModelOperations {
       return new Schema(data, this);
     }
   }
-  async get(index) {
+
+  async get(index = "*") {
     var that = this;
     if (typeof index == "string") {
-      return this.records[index] ? new Schema(this.records[index], that) : null;
+      if (index === "*") return this.records;
+      else
+        return this.records[index]
+          ? new Schema(this.records[index], that)
+          : null;
     } else if (typeof index == "object") {
       let keys = Object.keys(index);
       let results = Object.keys(this.records)
@@ -79,12 +94,11 @@ export default class ModelOperations {
 
   async update(identifier, data) {
     let _d = await this.get(identifier);
+
     if (Array.isArray(_d) && _d.length > 0) {
-      return await Promise.all(
-        _d.map(async (d) => {
-          return await d.update(data);
-        }),
-      );
+      for (let i = 0; i < _d.length; i++) {
+        await _d[i].update(data);
+      }
     } else if (_d instanceof Schema) {
       return await _d.update(data);
     } else {
@@ -95,11 +109,9 @@ export default class ModelOperations {
   async delete(identifier) {
     let _d = await this.get(identifier);
     if (Array.isArray(_d) && _d.length > 0) {
-      await Promise.all(
-        _d.map(async (d) => {
-          return await d.delete(true);
-        }),
-      );
+      for (let i = 0; i < _d.length; i++) {
+        await _d[i].delete(true);
+      }
     } else if (_d instanceof Schema) {
       await _d.delete(true);
     }

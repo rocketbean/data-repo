@@ -1,6 +1,6 @@
 {
   "name": "@rocketbean/data-repo",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "on-File data repository, file caching, out of process memory module for nodejs",
   "main": "index.js",
   "type": "module",

@@ -1,16 +1,19 @@
-import fs, { existsSync, mkdirSync, constants } from "fs";
+import fs, { existsSync, mkdirSync, constants, readFileSync } from "fs";
+import Intel from "../index.js";
 import path from "path";
 import md5 from "md5";
-
+import Model from "../Model.js";
 import CryptoJS from "crypto-js";
 export default class FileDriver {
   data = {
     basepath: this.storage,
-    name: "test",
+    name: "reader",
     models: {},
+    _models: {},
     options: {},
   };
 
+  ext = Intel.ext;
   proxy = new Proxy(this.data, {
     set: async (obj, prop, v) => {
       obj[prop] = v;
@@ -29,9 +32,10 @@ export default class FileDriver {
   constructor(property, hashcode) {
     this.hashcode = hashcode;
     this.storage = property.storage;
+    this.data.name = property.name;
     this.data.options = Object.assign(this.#options, property.options);
     this.finalPath = path.join(this.storage, this.hashcode);
-    this.intelPath = path.join(this.storage, this.hashcode + ".chasi");
+    this.intelPath = path.join(this.storage, this.hashcode + this.ext);
   }
 
   parser(data) {
@@ -47,10 +51,9 @@ export default class FileDriver {
 
   decrypter(data, decryptAs = null) {
     if (decryptAs === null) decryptAs = this.data.options.writeAs;
-    if (decryptAs === "readable") {
+    try {
       return JSON.parse(data);
-    }
-    if (decryptAs === "hash") {
+    } catch (e) {
       data = CryptoJS.AES.decrypt(data, this.data.options.passphrase);
       return JSON.parse(data.toString(CryptoJS.enc.Utf8));
     }
@@ -72,19 +75,16 @@ export default class FileDriver {
         .finally(async () => {
           let content = await fs.promises
             .readFile(filepath, { encoding: "utf8" })
-            .then((content) => {
+            .then(async (content) => {
               try {
                 content = this.decrypter(content);
               } catch (e) {
                 if (e.message.includes("Malformed")) {
-                  console.log(e);
                   throw new Error(
                     "Bad Decryption Key, Malformed data parsing error",
                   );
                 } else {
-                  let decAs =
-                    this.data.options.writeAs == "hash" ? "readable" : "hash";
-                  content = this.decrypter(content, decAs);
+                  content = this.decrypter(content, this.data.options.writeAs);
                 }
               }
               resolve({
@@ -113,22 +113,62 @@ export default class FileDriver {
   async registerModel(model) {
     let raw = await this.writeIfNotExist(model.finalPath, model);
     model.preload(raw.content);
-    if (!raw.exists) {
-      this.proxy.models[md5(model.name) + ".chasi"] = model;
-      this.proxy._models[model.name] = {
-        path: model.finalPath,
-      };
-      this.proxy.models = this.proxy.models;
+    this.proxy.models[md5(model.name) + this.ext] = model;
+    this.proxy._models[model.name] = {
+      path: model.finalPath,
+      name: model.name,
+      property: model.property,
+      options: model.options,
+    };
+    let rawIntel = { ...this.proxy };
+    delete rawIntel.models;
+    Intel.instance.models[model.name] = model;
+    await this.writeIfNotExist(this.intelPath, rawIntel, true);
+  }
+
+  async getFileSync(dir) {
+    return await new Promise((res, rej) => {
+      fs.readFile(dir, function (err, data) {
+        if (err) return console.error(err);
+        res(data.toString());
+      });
+    });
+  }
+
+  async getBaseConf() {
+    if (existsSync(this.intelPath)) {
+      return JSON.parse(await this.getFileSync(this.intelPath));
+    } else {
+      return this.data;
     }
   }
 
+  async compareModels() {
+    let prox = (await this.writeIfNotExist(this.intelPath, this.proxy)).content;
+    let models = Object.keys(prox._models);
+    for (let m = 0; m < models.length; m++) {
+      let prop = prox._models[models[m]];
+      let model = await Model.set(prop.name, prop.property, prop?.options);
+      await model.save();
+    }
+  }
+
+  async destroyModel(model) {
+    delete this.proxy.models[md5(model.name) + this.ext];
+    delete this.proxy._models[model.name];
+    this.proxy.models = this.proxy.models;
+  }
+
   async validate() {
-    if (existsSync(this.storage) === false) {
+    if (!existsSync(this.storage)) {
       mkdirSync(this.storage);
     }
 
-    if (existsSync(this.finalPath) === false) {
+    if (!existsSync(this.finalPath)) {
       mkdirSync(this.finalPath);
+    }
+    if (existsSync(this.intelPath)) {
+      await this.compareModels();
     }
 
     this.proxy = (

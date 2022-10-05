@@ -13,13 +13,16 @@ data-repo is a file-based data storage, which dev's can do basic CRUD operation 
     import  DataRepo, { Model } from  "@rocketbean/data-repo";
     import path from "path"
 
-    var repo = await  DataRepo.init({
-    	storage:  path.join(process.cwd(), "./storage2"),
-    	hashfrom:  "chasi",
-    	driver:  "file",
-    	options: {
-    		writeAs:  "readable",
-    	},
+    var repo = await DataRepo.init({
+      storage: path.join(process.cwd(), "./storage2"),
+      driver: "file",
+      name: "box",
+      hashfrom: "boxed",
+      options: {
+        writeAs: "hash",
+        passphrase: "context",
+        reset: false,
+      },
     });
 
 initialization will require parameters:
@@ -27,9 +30,10 @@ initialization will require parameters:
 > parameters prefixed with "\*" is a default setting.
 
 - storage [*string*] - directory where repo and accommodated files will be saved
+- name [*string*] - a name for the container, this property have no effect to new or existing repo.
 - hashfrom [*string*] - this hash string will be used for naming containers and repo file,
-  chaging this property after initialization will cause repo to be re-initialized.
-- driver [*string*]- a storage driver option. As of this release, "file" is the only available driver.
+  chaging this property after initialization will cause repo to be re-initialized and into a new set of instance.
+- driver [_string_]["file"] - a storage driver option. As of this release, "file" is the only available driver.
 - options [object] - associated options, to change the behavior of the repo.
   - options[writeAs] [*string*] - option on how the contents will be saved.
   -      *"readable" - contents will be readable as it will be parsed as JSON string
@@ -40,8 +44,19 @@ initialization will require parameters:
   -      "invoke" - the storage will be reset everytime the repo is invoked.
 
 **creating a Model**
+var repo = await DataRepo.init({
+storage: path.join(process.cwd(), "./storage2"),
+driver: "file",
+name: "box",
+hashfrom: "boxed",
+options: {
+writeAs: "hash",
+passphrase: "context",
+reset: false,
+},
+});
 
-    let  clusterModel = await  Model.set("cluster",
+    let clusterModel = await repo.createModel("cluster",
     {
     	session: {
     		type:  "",
@@ -59,8 +74,8 @@ initialization will require parameters:
     	},
     },
     {
-    	max:  3,
-    	strict:  true,
+    	max:  3, // do not declare this option to set the max record to unlimited.
+    	strict:  true,  // set to false to allow extra property.
     });
 
 Model parameters:
@@ -77,9 +92,11 @@ Model parameters:
 **Model CRUD Operations:**
 
 > async Model.create({}) - creating a record
+> Parameter can be Array[] or Object{}
 
 ```
-let  clust = await  clusterModel.create({
+// creating a single record
+await clusterModel.create({
 	session:  uuidv4(),
 	threads: [],
 	logs: {
@@ -87,8 +104,32 @@ let  clust = await  clusterModel.create({
 			message:  "initialized",
 		},
 	},
-	text:  "test",
+	text:  "init",
 });
+
+// Or creating multiple record
+await clusterModel.create([
+	{
+		session:  uuidv4(),
+		threads: [],
+		logs: {
+			log: {
+				message:  "started",
+			},
+		},
+		text:  "start",
+	},
+	{
+		session:  uuidv4(),
+		threads: [],
+		logs: {
+			log: {
+				message:  "running",
+			},
+		},
+		text:  "processing",
+	}
+]);
 ```
 
 <hr/>
@@ -97,13 +138,17 @@ let  clust = await  clusterModel.create({
 >
 > - < identifier>[*as string*] - if string is declared, items will be matched with the "\_id" property that is automatically created and is unique. if matched, it will always return as a single object.
 >
+> - < identifier>[<string>"*"] - returns all the records.
+>
 > - < identifier>[*as object*] - if type of [object] is passed, it will try to match keys and values to the record,
 >   it may return as a single object or an array for multiple results.
 
 ```
 // fetching record using string
+// this is an example value for ["\_id"]
 await clusterModel.get('4d4b2c18-bc88-4c50-a599-7d0a58931634')
-
+// fetching all records
+await clusterModel.get('*')
 // Or using an object
 await clusterModel.get({ text:  "test3" })
 ```
@@ -122,7 +167,7 @@ _Or updating using a schema, will only update the specific record_
 
 <hr/>
 
-    async Model.delete(< identifier>,  < data>) - deleting a record
+> async Model.delete(< identifier>, < data>) - deleting a record
 
 _deleting using a model, if the identifier results to more than 1 record, all results will be deleted_
 
@@ -131,7 +176,3 @@ _deleting using a model, if the identifier results to more than 1 record, all re
 _Or deleting using a schema, will only delete the specific record_
 
     await clust.delete({ text:  "test3" })
-
-```
-
-```
